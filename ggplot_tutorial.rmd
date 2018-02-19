@@ -1,0 +1,118 @@
+---
+title: "ggplot-tutorial"
+author: "AyoushM"
+date: "February 19, 2018"
+output: html_document
+---
+
+## Importing libraries
+```{r message=FALSE}
+library(ggplot2)
+```
+
+## Importing Midwest Population Dataset
+```{r}
+midwest <- read.csv("http://goo.gl/G1K41K")
+```
+
+### What do we have here?
+```{r}
+colnames(midwest)
+```
+
+### What do we have here (v2)?
+```{r}
+summary(midwest)
+```
+
+## Plotting
+### Trying to make a simple scatter plot in ggplot2
+```{r}
+ggplot(midwest, aes(x = area, y = poptotal))
+```
+
+### Philosophical Discussion
+No, not Plato.
+So why didn't that plot work? It's becuase of the design philosophy behind ggplot2. Markers in ggplot2, called 'geoms' are added in layers. What that statement essentially did was create a plot in ggplot2 with the correct axes, and data, and scale. The thing is we didn't tell it how to show the data. So let's do that.
+
+Also, while we are at it, let's get rid of the scientific numbering.
+```{r}
+options(scipen = 999)
+```
+
+```{r}
+ggplot(midwest, aes(x = area, y = poptotal)) +
+  geom_point()
+```
+
+Another way to do this:
+```{r}
+ggplot(midwest) +
+  geom_point(aes(x = area, y = poptotal))
+```
+
+
+### Layer upon Layer
+Just to make the layered nature of ggplot2 plots more apparent, moving forward, we're going to store the map in an object and add layers to it and plot it along the way.
+```{r}
+# This is the blank plot that we had at first, but instead of directly plotting it, we are storing it in an object
+gg_scat <- ggplot(midwest, aes(x = area, y = poptotal))
+```
+But before we add the points...
+
+### It's not always black and white
+Okay now that we know how to plot a graph, let's add some color to it.
+So, I've been told that midwest US has a number of states, and that they are in fact different. So let's go ahead and represent that. Also, we could probably use larger points.
+```{r}
+gg_scat +
+  geom_point(col='blue', size=3)
+```
+But that's equally ugh-ly. So let's color this by the State that the county belongs to instead.
+
+First try:
+```{r}
+gg_scat +
+  geom_point(col=state, size=3)
+```
+Why did that not work? 
+The 'col' atrribute inside geom_point (or actually geom_anything) does not maintain the context of the data initiated originally withing the ggplot statement. So, let's try explicitly mentioning that.
+
+Second try:
+```{r}
+gg_scat +
+  geom_point(col=midwest$state, size=3)
+```
+Why did that not work?
+The 'col' attribute is meant for accepting colors as an input, and not a set of categorical variables. For that, we would need to pass it within an aesthetics function.
+
+Third time's the charm:
+```{r}
+gg_scat + geom_point(aes(col=state), size=3)
+```
+Now what we have assigned color to each state, let's save that on to our ggplot object, and add titles to our graph.
+```{r}
+gg_scat <- gg_scat + geom_point(aes(col=state), size=3)
+```
+
+
+### Two ways to Title
+While we're sure there are more ways to put titles and axis labels on a graph in ggplot2, here are two common ones:
+
+#### To lab or not to lab (Alternatively titled: P.S. I Lab You)
+```{r}
+gg_scat + labs(title="Midwest: County Area vs Population", subtitle="source: http://goo.gl/G1K41K", x = "County Area", y = "Population", color = "State")
+```
+
+#### GG, GG
+```{r}
+gg_scat + 
+  ggtitle("Midwest: County Area vs Population", subtitle="source: http://goo.gl/G1K41K") +
+  xlab("County Area") +
+  ylab("Population")
+```
+
+#### So which one is the right one?
+Well, it depends.
+Labs is the short hand method that gives us an easy way to add all of the labels and titles (even for the legends) in one go.
+
+
