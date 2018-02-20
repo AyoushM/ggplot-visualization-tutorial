@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/362136/8bba41bc7f9a430ea37c94908d46a661
+bundleId: https://api.rpubs.com/api/v1/document/362136/8bba41bc7f9a430ea37c94908d46a661
+url: http://rpubs.com/imayoush/362136
+when: 1519106469.67493

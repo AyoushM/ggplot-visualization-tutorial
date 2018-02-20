@@ -1,0 +1,120 @@
+---
+title: "Chloropleths"
+author: "Ayoush Mukherjee, Charlene Quach"
+date: "February 16, 2018"
+output: html_document
+---
+
+Check this github link for the repository to get all code and data: https://github.com/AyoushM/ggplot-visualization-tutorial
+
+## Reading the Dataset 
+```{r}
+KC_Prelim <- read.csv('Datasets/kc_house_data.csv')
+```
+
+### Looking at the variables
+```{r}
+colnames(KC_Prelim)
+```
+
+### Looking at the summary statistics for each of the features
+```{r}
+summary(KC_Prelim)
+```
+
+### Cleaning the dataset to use for analysis
+Items to alter:
+  We do not need the id.
+  The date needs to be converted into the datetime format for meaningful use.
+  Sqft_living and sqft_lot can be removed as we have updated figures in sqft_living15 and sqft_lot15
+  Waterfront is a categorical variable.
+  View is the number of times it has been viewed which can be removed for this analysis.
+  Condition is ordinal.
+  Zipcode is categorical.
+```{r}
+# Creating Clean Dataset
+KingCounty <- KC_Prelim[-c(1,6,7, 10)]
+
+# Cleaning Dates
+KingCounty$date <- as.Date(KingCounty$date, '%y%y%m%d')
+
+# Fixing categorical variables
+KingCounty$waterfront <- as.character(KingCounty$waterfront)
+KingCounty$waterfront[KingCounty$waterfront == '0'] <- 'No'
+KingCounty$waterfront[KingCounty$waterfront != 'No'] <- 'Yes'
+KingCounty$waterfront <- as.factor(KingCounty$waterfront)
+
+KingCounty$condition <- as.ordered(KingCounty$condition)
+KingCounty$zipcode <- as.factor(KingCounty$zipcode)
+```
+
+### Checking updated summary statistics
+```{r}
+summary(KingCounty)
+```
+
+# Chloropleth
+
+## Libraries
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(ggmap)
+library(rgdal)
+```
+
+### Reading the shapefile
+The shape file was sourced from King County: https://www5.kingcounty.gov/gisdataportal/
+
+First we check the layers in the shape file. Layers are different representations of data that are in the shape file.
+```{r}
+ogrListLayers('Datasets/zipcode')
+```
+The shape file contains only one layer, which is that of the zipcodes. Now we read the shape file and do a preliminary plot of the of the shapefile
+```{r}
+kc_map <- readOGR('Datasets/zipcode', layer = 'zipcode')
+plot(kc_map, main = 'King County Zipcodes')
+```
+
+The shapefile then needs to be converted into a ggplot2 object so that it can be used for plotting.
+The region parameter indicates what attribute of the map should be used as the ID
+```{r}
+kc_df <- fortify(kc_map, region = 'ZIPCODE')
+```
+
+## Preliminary Chloropleth Plotting
+To plot this, we're using the 'price' field, which is the price at which the house was sold.
+```{r}
+ggplot() + geom_map(map = kc_df, data = KingCounty, aes(map_id = zipcode, fill = price)) + expand_limits(x = c(1200000, 1550000), y = c(-50000, 300000))
+```
+So, this is how a chloropleth looks. But this is all wrong. The scale is intuitively misleading. Darker colors are for lower values. Also, we don't know what kind of normalization was used to arrive at the prices.
+
+
+## Creating meaningful features for plotting
+Okay, now that we know how it looks, we can make it better.
+```{r message=FALSE}
+library(plyr)
+KingCounty$Price_PerSqft <- KingCounty$price/KingCounty$sqft_living15
+kc <- ddply(KingCounty, .(zipcode), summarize, MeanPPSF = mean(Price_PerSqft))
+```
+
+Let's plot using that data now.
+```{r}
+ggplot() +
+  geom_map(map = kc_df, data = kc, aes(map_id = zipcode, fill = MeanPPSF), color='white') +
+  expand_limits(x = c(1200000, 1550000), y = c(-50000, 300000)) +
+  scale_fill_gradient2(low = 'lightblue', midpoint = (min(kc$MeanPPSF) + max(kc$MeanPPSF))/2, mid = 'blue', high = 'darkblue', limits = c(min(kc$MeanPPSF), max(kc$MeanPPSF))) +
+  labs(fill = 'Mean Price Per\nSquare Foot') +
+  ggtitle('King County Property Prices', subtitle = 'Average prices per square foot in each zipcode')
+```
+But blue? Seriously? No.
+
+Better Colors.
+```{r}
+ggplot() +
+  geom_map(map = kc_df, data = kc, aes(map_id = zipcode, fill = MeanPPSF), color='black') +
+  expand_limits(x = c(1200000, 1550000), y = c(-50000, 300000)) +
+  scale_fill_gradient2(low = 'lightgreen', midpoint = (min(kc$MeanPPSF) + max(kc$MeanPPSF))/2, mid = 'yellow', high = 'red', limits = c(min(kc$MeanPPSF), max(kc$MeanPPSF))) +
+  labs(fill = 'Mean Price Per\nSquare Foot') +
+  ggtitle('King County Property Prices', subtitle = 'Average prices per square foot in each zipcode') +
+  theme(axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank())
+```

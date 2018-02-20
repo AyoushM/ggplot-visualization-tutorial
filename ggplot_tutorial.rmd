@@ -1,9 +1,10 @@
 ---
 title: "ggplot-tutorial"
-author: "AyoushM"
+author: "Ayoush Mukherjee, Charlene Quach"
 date: "February 19, 2018"
 output: html_document
 ---
+Check this github link for the repository to get all code and data: https://github.com/AyoushM/ggplot-visualization-tutorial
 
 ## Importing libraries
 ```{r message=FALSE}
@@ -16,6 +17,11 @@ midwest <- read.csv("http://goo.gl/G1K41K")
 ```
 
 ### What do we have here?
+```{r}
+length(midwest$PID)
+```
+
+
 ```{r}
 colnames(midwest)
 ```
@@ -70,7 +76,7 @@ gg_scat +
 But that's equally ugh-ly. So let's color this by the State that the county belongs to instead.
 
 First try:
-```{r}
+```{r eval=FALSE}
 gg_scat +
   geom_point(col=state, size=3)
 ```
@@ -78,7 +84,7 @@ Why did that not work?
 The 'col' atrribute inside geom_point (or actually geom_anything) does not maintain the context of the data initiated originally withing the ggplot statement. So, let's try explicitly mentioning that.
 
 Second try:
-```{r}
+```{r eval=FALSE}
 gg_scat +
   geom_point(col=midwest$state, size=3)
 ```
@@ -89,9 +95,17 @@ Third time's the charm:
 ```{r}
 gg_scat + geom_point(aes(col=state), size=3)
 ```
-Now what we have assigned color to each state, let's save that on to our ggplot object, and add titles to our graph.
+
+We can change the color palette too, to make it look more palette-able.
 ```{r}
-gg_scat <- gg_scat + geom_point(aes(col=state), size=3)
+gg_scat +
+  geom_point(aes(col=state), size=3) +
+  scale_color_brewer(palette = "Set2")
+```
+
+Now that we have assigned color to each state, let's save that on to our ggplot object, and add titles to our graph.
+```{r}
+gg_scat <- gg_scat + geom_point(aes(col=state), size=3) + scale_color_brewer(palette = "Set2")
 ```
 
 
@@ -113,6 +127,60 @@ gg_scat +
 
 #### So which one is the right one?
 Well, it depends.
-Labs is the short hand method that gives us an easy way to add all of the labels and titles (even for the legends) in one go.
+Labs is the short hand method that gives us an easy way to add all of the labels and titles (even for the legends) in one go. Also, if you are planning to refine the graphs further in a tool like Adibe Illustrator, then this provides a quick way to just place the text.
+With ggtitle, xlab, and ylab we can attach 'aes' objects to the elements and really customize them at a granular level in ggplot iteslf.
+Although, one thing to note is that even using 'labs' one can customize granularly using 'theme', but fir this purpose, the ggtitle method is much more structured.
+
+I'm just saving one of them to the plot.
+```{r}
+gg_scat <- gg_scat + labs(title="Midwest: County Area vs Population", subtitle="source: http://goo.gl/G1K41K", x = "County Area", y = "Population", color = "State")
+```
 
 
+## The closer you look...
+Now that we have a plot that looks decent, let's get down to the nitty-gritty of it. While there are many observations, the meat of the data lies in the bottom 1/5th of the graph. The rest can be treated as outliers. So let's crop the graph.
+
+So like everything in life, there are two ways to do this. To higlight the difference between the two, let's add a smoothing line. This will become relevant shortly. Trust me.
+
+#### So smooth
+What this does is basically add a linear model (hence the 'method = lm') that tries to justify the spread in the data. Again, I'll show in a bit why this becomes relevant to understand what's happening.
+```{r}
+gg_scat <- gg_scat + geom_smooth(method = "lm", col = 'darkred', size = 2)
+gg_scat
+```
+
+Now, off with the excess.
+
+### Method 1: Know your limits
+```{r}
+gg_scat +
+  xlim(c(0, 0.08)) +
+  ylim(c(0, 1000000))
+```
+
+### Method 2: Zoomin
+```{r}
+gg_scat +
+  coord_cartesian(xlim=c(0, 0.08), ylim = c(0, 1000000))
+```
+
+Do you see a difference between the two?
+
+In the limiting approach (first graph), the line appears much more parallel to the x axis as compared to the zooming approach (second graph).
+This is because in the first approach, the smoothing line is calculated after the plot is made. It thus takes into account only the data that is present in the current plot, and does not try to run the linear model across the whole dataset.
+In the second approach, the whole plot is made, and then the area prescribed in the coordinate limits is ahown. So while the plot area shows only the selected section, the the smoothing line is for the entire dataset.
+
+It's not that one approach is wrong and the other is right. The limiting approach limits the data being considered for the plot, whereas the zooming approach focuses on a certain section of it. Both can be useful depending on the application.
+
+Again I'm just saving one of them into our plot object.
+```{r}
+gg_scat <- gg_scat +
+  xlim(c(0, 0.08)) +
+  ylim(c(0, 1000000))
+```
+
+## Save our plots!
+So now that we have a plot, let's save it, and be done with it. You can also save it the old-fashioned way by hitting save from the plot window, but it deprives you of all the gggoodness. Enter ggsave.
+```{r warning=FALSE}
+ggsave(filename = 'Midwest - County Area vs Population.pdf', plot = gg_scat, device = "pdf", width = 11, height = 8.5, units = "in")
+```
